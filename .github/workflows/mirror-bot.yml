@@ -7,12 +7,14 @@ on:
   workflow_dispatch:
    
 env:
-  GitHubMail: ${{ secrets.GitHubMail }}
-  GitHubName: ${{ secrets.GitHubName }}
+  # Change these values if you have forked it for your own works
+  GitHubMail: "progckerdevl@gmail.com"
+  GitHubName: "Progcker" 
+  Branch: "master"
 
 jobs:
-  debug:
-    runs-on: ubuntu-20.04
+  build:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -25,22 +27,23 @@ jobs:
           git config --global credential.helper store
           echo "https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com" > ~/.git-credentials
 
-      
+      # Cleanup The Actions Workspace Using Custom Composite Run Actions
+      - uses: rokibhasansagar/slimhub_actions@main
 
       - name: Clone The Secret Mirror Repository
         run: |
-          git clone https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com/${{ secrets.MIRROR_REPOSLUG }} source
+          git clone https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com/${{ secrets.MIRROR_REPOSLUG }} -b ${Branch} source
 
       - name: Compile The Mirroring Docker Container
         run: |
           cd source || exit 1
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
           docker container prune --force || true
           docker build . --rm --force-rm --compress --no-cache=true --pull --file Dockerfile -t mirror-bot
+          docker image ls
 
-      - name: running bot
-        continue-on-error: true
+      - name: running Docker
         timeout-minutes: 340
+        continue-on-error: true
         run: |
           docker run --privileged --rm -i mirror-bot
 
@@ -52,6 +55,5 @@ jobs:
           cd loop || exit 1
           echo $(( RANDOM - ( RANDOM % RANDOM ) )) > looper.txt
           git add looper.txt
-          git commit -m "Workflow : Loop at $(date -u +%D-%T%P)"
+          git commit -m "Workflow : Loop"
           git push -q https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} HEAD:main
-
